@@ -45,3 +45,19 @@ $RECYCLE.BIN/
 Network Trash Folder
 Temporary Items
 .apdisk
+
+## IDE files to ignore
+nbproject/
+.idea/
+*.tmproj
+
+# Symfony files to ignore
+app/config/parameters.ini
+web/bundles/
+app/bootstrap.php.cache
+app/cache/*
+app/logs/*
+build/
+vendor
+composer.phar
+bin/

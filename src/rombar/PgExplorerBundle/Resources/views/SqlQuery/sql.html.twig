@@ -1,0 +1,120 @@
+{% extends "rombarPgExplorerBundle::layout.html.twig" %}
+{% block content %}
+<div class="panel panel-default">
+    <div class="panel-heading"><h3 class="panel-title">SQL Generator</h3><span class="ajaxSpinner"></span></div>
+    <div class="panel-body">
+        <form id="generateSQLForm" action="" mothod="post" onsubmit="generateSQL();
+                return false;">
+            <div id="generatorMrg" style="display:none;"></div>
+
+            <div>
+                <dl id="columns" style="display:none;">
+                    <dt>SELECT <input type="text" value="" name="column" id="column"><a href="#generateSQLForm" onclick="addColumn();" class="btn btn-default">Add in select</a></dt>
+
+                </dl>
+            </div>
+            <div>
+                <dl id="tables">
+                    <dt>FROM <input type="text" value="" name="table" id="table"><a href="#generateSQLForm" onclick="addTable();" class="btn btn-default">Add table</a></dt>
+
+                </dl>  
+                <ul id="joinTableInput" style="display:none">
+                    <li>
+                        <input type="text" value="" name="joinTable" class="joinTable"><a href="#generateSQLForm" onclick="addJoin();" class="btn btn-default">Add Join table</a>
+                    </li>
+                </ul>
+            </div>
+            <div>
+                <dl id="groupBys" style="display:none;">
+                    <dt>GROUP BY <input type="text" value="" name="groupBy" id="groupBy"><a href="#generateSQLForm" onclick="addGroupBy();" class="btn btn-default">Add in group by</a></dt>
+
+                </dl>   
+            </div>
+            <div>
+                <dl id="orderBys" style="display:none;">
+                    <dt>ORDER BY <input type="text" value="" name="orderBy" id="orderBy"><a href="#generateSQLForm" onclick="addOrderBy();" class="btn btn-default">Add in order by</a></dt>
+
+                </dl>   
+            </div>
+            <div>
+                <a href="#requestToolbar" onclick="generateSQL();" class="btn btn-default">Generate SQL</a>
+            </div>
+        </form>
+    </div>
+</div>
+<div class="panel panel-default">
+    <div class="panel-heading"><h3 class="panel-title">SQL request</h3><span class="ajaxSpinner"></span></div>
+    <div class="panel-body">
+        <form id="sqlForm" action="" method="post" onsubmit="doRequest();
+                return false;">
+            <div>
+                <div>
+                    <div id="requestToolbar" style="margin-left:10%;" class="btn-group">
+                        <a href="#requestToolbar" onclick="indentRequest();" class="btn btn-default">Indent</a>
+                        <a href="#result" onclick="doRequest();" class="btn btn-default">Execute Query</a>
+                        <a href="#result" onclick="doRequest('explain');" class="btn btn-default">Explain Query</a>
+                        <a href="#result" onclick="doRequest('explainAnalyse');" class="btn btn-default">Explain Analyse Query</a>
+                    </div>
+                    <textarea name="request" id="request" style="width:80%;margin: 5px 10%;height:80%;" rows="25">
+                    WITH rfcs as (     SELECT palier_sms, operateur_id, devise_operateur,         CASE WHEN rfc.client = ds.client OR rfc.client = ds.parrain THEN true ELSE false END as is_propre,         CASE WHEN frais_commission_mo + frais_commission_mt + frais_commission_dr > 0             THEN frais_commission_mo + frais_commission_mt + frais_commission_dr         ELSE 0 END as reversmt,         frais_routage_mo + frais_retry_mo + frais_operateur_mt + frais_routage_mt + frais_operateur_dr + frais_routage_dr + frais_retry_dr         + (CASE WHEN frais_commission_mo + frais_commission_mt + frais_commission_dr < 0             THEN frais_commission_mo + frais_commission_mt + frais_commission_dr         ELSE 0 END)  as factu     FROM smsc.regle_facturation_client rfc         INNER JOIN smsc.deploiement_service ds ON (ds.deploiement_id, ds.service_id) = (rfc.deploiement_id, rfc.service_id)     WHERE rfc.client = 1358 and not supprime     GROUP BY 1,2,3,4,5,6 ), avg_rfcs as (     SELECT palier_sms,         operateur_id,         devise_operateur,         is_propre,         avg(reversmt) as avg_reversmt,         avg(factu) as avg_factu ,         array_length(array_agg(reversmt),1) as nb_pu_reversmt,         array_length(array_agg(factu),1) as nb_pu_factu     FROM rfcs     GROUP BY 1,2,3,4 )  SELECT ps.id as id_palier,     ps.nom as palier,     os.brand,     os.id as operateur,     devise_operateur,     is_propre,     avg_reversmt,     avg_factu ,     nb_pu_reversmt,     nb_pu_factu,         avg(avg_reversmt) OVER (PARTITION BY ps.id, ps.nom,is_propre,devise_operateur) as avg_reversmt_palier,     avg(avg_factu) OVER (PARTITION BY ps.id, ps.nom,is_propre,devise_operateur) as avg_factu_palier FROM avg_rfcs as rfcs     INNER JOIN smsc.palier_sms ps ON ps.id = rfcs.palier_sms     INNER JOIN smsc.operateur_sms os ON os.id = rfcs.operateur_id ORDER BY is_propre,2,3
+                    </textarea>
+{# WITH rfcs as (
+    SELECT palier_sms, operateur_id, devise_operateur,
+        CASE WHEN rfc.client = ds.client OR rfc.client = ds.parrain THEN true ELSE false END as is_propre,
+        CASE WHEN frais_commission_mo + frais_commission_mt + frais_commission_dr > 0
+            THEN frais_commission_mo + frais_commission_mt + frais_commission_dr
+        ELSE 0 END as reversmt,
+        frais_routage_mo + frais_retry_mo + frais_operateur_mt + frais_routage_mt + frais_operateur_dr + frais_routage_dr + frais_retry_dr
+        + (CASE WHEN frais_commission_mo + frais_commission_mt + frais_commission_dr < 0
+            THEN frais_commission_mo + frais_commission_mt + frais_commission_dr
+        ELSE 0 END)  as factu
+    FROM smsc.regle_facturation_client rfc
+        INNER JOIN smsc.deploiement_service ds ON (ds.deploiement_id, ds.service_id) = (rfc.deploiement_id, rfc.service_id)
+    WHERE rfc.client = 1358 and not supprime
+    GROUP BY 1,2,3,4,5,6
+), avg_rfcs as (
+    SELECT palier_sms,
+        operateur_id,
+        devise_operateur,
+        is_propre,
+        avg(reversmt) as avg_reversmt,
+        avg(factu) as avg_factu ,
+        array_length(array_agg(reversmt),1) as nb_pu_reversmt,
+        array_length(array_agg(factu),1) as nb_pu_factu
+    FROM rfcs
+    GROUP BY 1,2,3,4
+)
+
+SELECT ps.id as id_palier,
+    ps.nom as palier,
+    os.brand,
+    os.id as operateur,
+    devise_operateur,
+    is_propre,
+    avg_reversmt,
+    avg_factu ,
+    nb_pu_reversmt,
+    nb_pu_factu,
+   
+    avg(avg_reversmt) OVER (PARTITION BY ps.id, ps.nom,is_propre,devise_operateur) as avg_reversmt_palier,
+    avg(avg_factu) OVER (PARTITION BY ps.id, ps.nom,is_propre,devise_operateur) as avg_factu_palier
+FROM avg_rfcs as rfcs
+    INNER JOIN smsc.palier_sms ps ON ps.id = rfcs.palier_sms
+    INNER JOIN smsc.operateur_sms os ON os.id = rfcs.operateur_id
+ORDER BY is_propre,2,3#}
+                </div>
+            </div>
+        </form>
+
+    </div>
+</div>
+<div class="panel panel-default">
+    <div class="panel-heading"><h3 class="panel-title">SQL results</h3><span class="ajaxSpinner"></span></div>
+    <div class="panel-body" id="result">
+
+    </div>
+
+
+</div>
+
+{% endblock %}

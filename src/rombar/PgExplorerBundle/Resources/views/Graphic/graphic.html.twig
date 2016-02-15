@@ -1,0 +1,150 @@
+{% extends "rombarPgExplorerBundle::layout.html.twig" %}
+{% block leftMenu %}{% endblock %}
+{% block content %}
+<style>
+    .sortable { list-style-type: none; margin: 0; padding: 0 0 2.5em; float: left; margin-right: 10px; 
+                border: 1px solid #dddddd;
+                border-collapse: separate;
+                *border-collapse: collapse;
+                -webkit-border-radius: 4px;
+                -moz-border-radius: 4px;
+                border-radius: 4px;
+                width:300px;
+                overflow:auto;
+                height:500px;
+    }
+    .sortable li { margin: 0 5px 5px 5px; padding: 5px; font-size: 1.2em; width: auto;list-style-type: none;}
+    .tableList div {width:300px;}
+    .tableList table {width:100%;}
+
+</style>
+<div class="panel panel-default" style="width:50%;">
+    <div class="panel-heading">
+        <h3 class="panel-title">Export for Neo4j</h3>
+    </div>
+    <div class="panel-body" id="exportBody">
+        <div class="btn-group" role="group" aria-label="..." style="margin-bottom: 10px;">
+            <button type="button" class="btn btn-default" id="exportNeo4j" >Start export</button>
+        </div>
+        <div class="ajaxSpinner"></div>
+
+        <div class="panel panel-danger" id="errorExport" style="display:none;">
+            <div class="panel-heading">
+                <h3 class="panel-title">Technical Error</h3>
+            </div>
+            <div class="panel-body">
+            </div>
+        </div>
+
+        <div class="panel panel-success" id="successExport" style="display:none;">
+            <div class="panel-heading">
+                <h3 class="panel-title">Files created</h3>
+            </div>
+            <div class="panel-body">
+            </div>
+        </div>
+    </div>
+</div>
+<div style="margin:10px 10px 10px 10px;">
+    <ul id="sortableStart" class="connectedSortable sortable">
+                {% for schema in schemas %}
+        <li class="ui-state-default " id="schema##{{ schema.getName() }}"><span class="schemaName">{{ schema.getName() }}</span>
+                    {% if schema.getTables()|length > 0 %}
+            <ul id="sortableS{{ loop.index }}" class="connectedSortable schema">
+                            {% set index = loop.index %}
+                             {% for table in schema.getTables() %}
+                                {% if table.getParentTables()|length == 0 %}
+                <li class="ui-state-default sortableS{{ index }}" id="table##{{ schema.getName() }}##{{ table.getOid() }}">{{ table.getName() }}</li>
+                                {% endif %}
+                            {% endfor %}
+            </ul>
+                    {% endif %}
+        </li>
+                {% endfor %}
+    </ul>
+    <ul id="sortableFinal" class="connectedSortable sortable">
+    </ul>
+</div>
+<form style="clear:both;padding: 20px 0px 0px 10px;" role="form" class="form-inline">
+    <div class="checkbox">
+        <label>
+            <input type="checkbox" id="linkedTables" value="1" name="linkedTables" checked="checked"/> Put associated tables
+        </label>
+    </div>
+    <div class="btn-group" data-toggle="buttons-checkbox">
+        <button type="button" class="btn btn-primary" onclick="loadGraph();">Load Graph</button>
+        <button type="button" class="btn btn-primary" onclick="centerGraph();">Center Graph</button>
+        <button type="button" class="btn btn-primary" onclick="$('.tbl-origin,.tbl-satellite').toggle();">Show details</button>
+    </div>
+</form>
+<div class="tableList"></div>
+<div id="canvas" style="border:2px solid black;clear:both;"></div>
+{% endblock %}
+{% block javascripts %}
+<script src="{{ asset('js/kineticjs/kinetic.min.js') }}"></script>
+<script src="{{ asset('js/treeDrawer.js') }}"></script>
+<script type="text/javascript">
+            $(document).ready(function() {
+                //Set main lists
+                $("#sortableStart, #sortableFinal").sortable({
+                    connectWith: ".connectedSortable",
+                    stop: function(event, ui) {
+                        //console.log('IN');
+
+                        if (ui.item.parent().hasClass('sortable') || ui.item.hasClass(ui.item.parent().attr('id'))) {
+                            //console.log('exit');
+                            return true;
+                        }
+                        if ((ui.item.parent().hasClass('schema'))) {
+                            //console.log('out');
+                            return false;
+                        }
+                    }
+
+                }).disableSelection();
+
+                //Set sub-list
+                $("#sortableS1,#sortableS2").sortable({
+                    connectWith: ".connectedSortable",
+                    stop: function(event, ui) {
+                        //console.log('IN2');
+                        if (ui.item.parent().hasClass('sortable')) {
+                            //console.log('exit2');
+                            return true;
+                        }
+                        if (!ui.item.hasClass(ui.item.parent().attr('id'))) {
+                            //console.log('out2');
+                            return false;
+                        }
+                    }
+                }).disableSelection();
+                $('#exportNeo4j').unbind('click');//Sinon double l'événement click. Bug à corriger
+                $('#exportNeo4j').click(function(event){
+                    event.preventDefault();
+                   $('#errorExport, #successExport').hide();
+
+                    $.get('/PgExplorer/web/app_dev.php/graphic/export-neo4j',
+                        {},
+                        function(data){
+                            if(data.ok == 1){
+                                $('#successExport').find('.panel-title:first').html(data.message);
+                                $('#successExport').show();
+                                var html = '<ul><li><a href="/PgExplorer/web/app_dev.php/graphic/download-csv/file/'+data.files.nodes+'">Nodes</a></li><li><a href="/PgExplorer/web/app_dev.php/graphic/download-csv/file/'+data.files.links+'">Links</a></li><ul>';
+                                html += '<pre>"E:\Neo4j Community\bin\Neo4jImport.bat" --into C:\Users\Romain\Documents\Neo4j\database.graphdb --nodes export_nodes.csv --relationships export_links.csv --array-delimiter "|"</pre>';
+                                $('#successExport').find('.panel-body:first').html(html);
+                            }else{
+
+                                if(data.trace){
+                                    $('#errorExport').find('.panel-body:first').html(data.message + '<p>' +data.trace+ '</p>');
+                                }else{
+                                    $('#errorExport').find('.panel-body:first').html(data.message);
+                                }
+                                $('#errorExport').show();
+                            }
+                        },
+                        'json'
+                    );
+                });
+            });
+</script>
+{% endblock %}

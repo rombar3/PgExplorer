@@ -1,0 +1,21 @@
+<table style="margin: 5px 0;" class="table">
+    <thead>
+        <tr>
+            {% for label in data[0]|keys %}
+                <th>{{ label }}</th>
+            {% endfor %}
+        </tr>
+    </thead>
+    <tbody>
+        {% for row in data %}
+        <tr>
+            {% for item in row %}
+            <td>{{ item|replace({' ': '&nbsp;'})|raw }}</td>
+            {% endfor %}
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% if analyse %}
+<a href="http://explain.depesz.com/">Get more help</a>
+{% endif %}

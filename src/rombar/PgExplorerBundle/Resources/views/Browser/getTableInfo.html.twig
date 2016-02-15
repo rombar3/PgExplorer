@@ -1,0 +1,190 @@
+{% if table is null %}
+<div>Unknown table.</div>
+{% elseif table.getColumns()|length > 0 %}
+<div>
+    <h2 style="width:50%;float:left;">{{ table.getSchema() }}.{{ table.getName() }}</h2>
+    <a style="width:10%;float:right;" href="#" onclick="showTable('{{ table.getSchema() }}', '{{ table.getOid() }}');">Refresh</a>
+</div>
+<div style="clear:both;" class="panel panel-default">
+    <div class="panel-heading"><h3 class="panel-title">Columns</h3></div>
+<div class="panel-body">
+    <table summary="Column list" class="table">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Type</th>
+                <th>Nullable</th>
+                <th>Default value</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for col in table.getColumns() %}
+            <tr>
+                <td>{{ col.getName() }}</td>
+                <td>{{ col.getType() }}</td>
+                <td>{{ col.getNullable() }}</td>
+                <td>{{ col.getDefault() }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+</div>
+    {% if table.getIndexs()|length > 0 %}
+<div style="clear:both;" class="panel panel-default">
+    <div class="panel-heading"><h3 class="panel-title">Indexes</h3></div>
+    <div class="panel-body">
+        <table summary="Column list" class="table">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Primary Key</th>
+                    <th>Unique</th>
+                    <th>Type</th>
+                    <th>Columns</th>
+                </tr>
+            </thead>
+            <tbody>
+                    {% for index in table.getIndexs() %}
+                <tr>
+                    <td>{{ index.getName() }}</td>
+                    <td>{% if index.getIsPrimary() %}True{% else %}False{% endif %}</td>
+                    <td>{% if index.getIsUnique() %}True{% else %}False{% endif %}</td>
+                    <td>{{ index.getType() }}</td>
+                    <td>{{ index.getColumns() }}</td>
+                </tr>
+                    {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+    {% endif %}
+
+    {% if table.getRules()|length > 0 %}
+<div style="clear:both;" class="panel panel-default">
+    <div class="panel-heading"><h3 class="panel-title">Rules</h3></div>
+    <div class="panel-body">
+        <table summary="Triggers list" class="table">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Definition</th>
+                    <th>Enabled</th>
+                </tr>
+            </thead>
+            <tbody>
+                    {% for tgr in table.getRules() %}
+                <tr>
+                    <td>{{ tgr.getName() }}</td>
+                    <td><pre>{{ tgr.getDetail()}}</pre></td>
+                    <td>{{ tgr.getEnabled() }}</td>
+                </tr>
+                    {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+    {% endif %}
+
+    {% if table.getRelchecks() %}
+<div style="clear:both;" class="panel panel-default"><div class="panel-heading"><h3 class="panel-title">Checks</h3></div></div>
+    {% endif %}
+
+
+
+    {% if table.getForeignKeys()|length > 0 %}
+<div style="clear:both;" class="panel panel-default">
+    <div class="panel-heading"><h3 class="panel-title">Foreign Keys</h3></div>
+    <div class="panel-body">
+        <table summary="Column list" class="table">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Definition</th>
+                </tr>
+            </thead>
+            <tbody>
+                    {% for fk in table.getForeignKeys() %}
+                <tr>
+                    <td>{{ fk.getName() }}</td>
+                    <td>{{ fk.getCreationQuery() }}</td>
+                </tr>
+                    {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+    {% endif %}
+    {% if table.getTriggers()|length > 0 %}
+<div style="clear:both;" class="panel panel-default">
+    <div class="panel-heading"><h3 class="panel-title">Triggers</h3></div>
+    <div class="panel-body">
+        <table summary="Triggers list" class="table">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Trigger function</th>
+                    <th>Definition</th>
+                    <th>Enabled</th>
+                </tr>
+            </thead>
+            <tbody>
+                    {% for tgr in table.getTriggers() %}
+                <tr>
+                    <td>{{ tgr.getName() }}</td>
+                    <td>{{ tgr.getFunctionName() }} <button class="btn btn-mini btn-info" type="button" onclick="showFunction({{ tgr.getFunctionOid() }});"> + </button></td>
+                    <td>{{ tgr.getCreationQuery()|replace({'CREATE TRIGGER':''}) }}</td>
+                    <td>{{ tgr.getIsEnabled() }}</td>
+                </tr>
+                    {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+    {% endif %}
+{% if table.getParentTables()|length > 0 %}
+<div style="clear:both;" class="panel panel-default">
+    <div class="panel-heading"><h3 class="panel-title">Inherit Tables</h3></div>
+    <div class="panel-body">
+        <table summary="Column list" class="table">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                </tr>
+            </thead>
+            <tbody>
+                    {% for pt in table.getParentTables() %}
+                <tr>
+                    <td><a onclick="showTable('{{ pt.getSchema() }}', '{{ pt.getOid() }}');" href="#">{{ pt.getName() }}</a></td>
+                </tr>
+                    {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+    {% endif %}
+    {% if table.getChildTables()|length > 0 %}
+<div style="clear:both;" class="panel panel-default">
+    <div class="panel-heading"><h3 class="panel-title">Child Tables</h3></div>
+    <div class="panel-body">
+        <table summary="Column list" class="table">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                </tr>
+            </thead>
+            <tbody>
+                    {% for ct in table.getChildTables() %}
+                <tr>
+                    <td><a onclick="showTable('{{ ct.getSchema() }}', '{{ ct.getOid() }}');" href="#">{{ ct.getName() }}</a></td>
+                </tr>
+                    {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+    {% endif %}
+
+{% else %}
+<div>No columns in this table.</div>
+{% endif %}

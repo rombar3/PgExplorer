@@ -1,0 +1,40 @@
+{% if function is null %}
+<div>Unknown function.</div>
+{% else %}
+<div>
+    <h2 style="width:50%;float:left;">{{ function.getSchema() }}.{{ function.getName() }}</h2>
+    <a style="width:10%;float:right;" href="#" onclick="showFunction('{{ function.getOid() }}');">Refresh</a>
+</div>
+<div style="clear:both;" class="panel panel-default">
+    <div class="panel-heading"><h3 class="panel-title">Information</h3></div>
+    <div class="panel-body">
+        <table summary="info list" class="table">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Result data type</th>
+                    <th>Argument data types</th>
+                    <th>Type</th>
+                </tr>
+            </thead>
+            <tbody>
+                
+                <tr>
+                    <td>{{ function.getName() }}</td>
+                    <td>{{ function.getResultDataType() }}</td>
+                    <td>{{ function.getArgumentDataTypes() }}</td>
+                    <td>{{ function.getType() }}</td>
+                </tr>
+                
+        </table>
+    </div>
+</div>
+{% if function.getCode() != '' %}
+<div style="clear:both;" class="panel panel-default">
+    <div class="panel-heading"><h3 class="panel-title">SQL code</h3></div>
+    <div class="panel-body">
+        <pre>{{ function.getCode() }}</pre>
+    </div>
+</div>
+{% endif %}
+{% endif %}

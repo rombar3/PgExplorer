@@ -1,0 +1,4 @@
+_demo:
+    resource: "@rombarPgExplorerBundle/Controller/"
+    type:     annotation
+    prefix:   /

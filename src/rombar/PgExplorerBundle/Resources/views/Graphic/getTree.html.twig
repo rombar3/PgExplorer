@@ -1,0 +1,164 @@
+{% set origTable = {} %}
+{% for oid,table in tables %}
+    {% if (table.getReferencedInTables()|length == 0 and table.getForeignKeys()|length == 0) %}
+        {# Orphan table #}
+        <div class="tableGroup">
+                <div id="table{{oid}}" class="tbl-origin">{% set origTable = origTable|merge({(oid):oid}) %}
+                    <table class="table table-striped table-bordered">
+                        <thead>
+                            <tr>
+                                <th colspan="4" style="text-align:center;">{{table.getName()}}</th>
+                            </tr>
+                            <tr>
+                                <th>Column</th>
+                                <th>Type</th>
+                                <th>Nullable</th>
+                                <th>Default value</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for col in table.getColumns() %}
+                                <tr>
+                                    <td>{{col.getName()}}</td>
+                                    <td>{{col.getType()}}</td>
+                                    <td>{{ col.getNullable() }}</td>
+                                    <td>{{ col.getDefault() }}</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+        </div>
+    {% elseif linkedTables and (table.getReferencedInTables()|length > 0 or table.getForeignKeys()|length > 0) %}
+        
+        {% if table.getForeignKeys()|length > 0 and not origTable[oid] is defined %}
+            <div class="tableGroup">
+                <div id="table{{oid}}" class="tbl-origin">{% set origTable = origTable|merge({(oid):oid}) %}
+                    <table class="table table-striped table-bordered">
+                        <thead>
+                            <tr>
+                                <th colspan="4" style="text-align:center;">{{table.getName()}}</th>
+                            </tr>
+                            <tr>
+                                <th>Column</th>
+                                <th>Type</th>
+                                <th>Nullable</th>
+                                <th>Default value</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for col in table.getColumns() %}
+                                <tr>
+                                    <td>{{col.getName()}}</td>
+                                    <td>{{col.getType()}}</td>
+                                    <td>{{ col.getNullable() }}</td>
+                                    <td>{{ col.getDefault() }}</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% for fk in table.getForeignKeys() %}
+                    {% set ref = pgAnalyzer.getTableByOid(fk.getParentTable()) %}
+                    <div id="table{{ref.getOid()}}" class="tbl-satellite">
+                    <table class="table table-striped table-bordered">
+                        <thead>
+                            <tr>
+                                <th colspan="4" style="text-align:center;">{{ref.getName()}}</th>
+                            </tr>
+                            <tr>
+                                <th>Column</th>
+                                <th>Type</th>
+                                <th>Nullable</th>
+                                <th>Default value</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for col in ref.getColumns() %}
+                                <tr>
+                                    <td>{{col.getName()}}</td>
+                                    <td>{{col.getType()}}</td>
+                                    <td>{{ col.getNullable() }}</td>
+                                    <td>{{ col.getDefault() }}</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% endfor %}
+        </div>
+        {% endif %}
+
+        {% if table.getReferencedInTables()|length > 0 %}
+            {% for refTbl in table.getReferencedInTables() %}
+                
+                {% if not tables[refTbl] is defined and not origTable[refTbl] is defined %}
+                    {% set ref = pgAnalyzer.getTableByOid(refTbl) %}
+                    <div class="tableGroup">
+                    <div id="table{{refTbl}}" class="tbl-origin">{% set origTable = origTable|merge({(refTbl):refTbl}) %}
+                        <table class="table table-striped table-bordered">
+                            <thead>
+                                <tr>
+                                    <th colspan="4" style="text-align:center;">{{ref.getName()}}</th>
+                                </tr>
+                                <tr>
+                                    <th>Column</th>
+                                    <th>Type</th>
+                                    <th>Nullable</th>
+                                    <th>Default value</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for col in ref.getColumns() %}
+                                    <tr>
+                                        <td>{{col.getName()}}</td>
+                                        <td>{{col.getType()}}</td>
+                                        <td>{{ col.getNullable() }}</td>
+                                        <td>{{ col.getDefault() }}</td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% for fk in ref.getForeignKeys() %}
+                        {% set ref2 = pgAnalyzer.getTableByOid(fk.getParentTable()) %}
+                        <div id="table{{ref2.getOid()}}" class="tbl-satellite">
+                            <table class="table table-striped table-bordered">
+                                <thead>
+                                    <tr>
+                                        <th colspan="4" style="text-align:center;">{{ref2.getName()}}</th>
+                                    </tr>
+                                    <tr>
+                                        <th>Column</th>
+                                        <th>Type</th>
+                                        <th>Nullable</th>
+                                        <th>Default value</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for col in ref2.getColumns() %}
+                                        <tr>
+                                            <td>{{col.getName()}}</td>
+                                            <td>{{col.getType()}}</td>
+                                            <td>{{ col.getNullable() }}</td>
+                                            <td>{{ col.getDefault() }}</td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+            {% endfor %}
+        {% endif %}
+    {% elseif not linkedTables and table.getReferencedInTables()|length > 0 and table.getForeignKeys()|length == 0 %}
+        {% set isRef = false %}
+        {% for ref in table.getReferencedInTables() if tables[ref.getOid()] %}
+            {% set isRef = true %}
+        {% endfor %}
+        {% if not isRef %}
+            
+        {% endif %}
+    {% endif %}
+{% endfor %}

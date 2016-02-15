@@ -1,0 +1,35 @@
+<?xml version="1.0" ?>
+
+<container xmlns="http://symfony.com/schema/dic/services"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://symfony.com/schema/dic/services http://symfony.com/schema/dic/services/services-1.0.xsd">
+
+    <services>
+        <service class="rombar\PgExplorerBundle\Models\PgRetriever" id="rombar_pgexplorerbundle.pgretriever">
+            <argument id="doctrine" type="service"/>
+            <argument id="monolog.logger" type="service"/>
+        </service>
+
+        <service class="rombar\PgExplorerBundle\Models\PgMassRetriever" id="rombar_pgexplorerbundle.pgmassretriever">
+            <argument id="doctrine" type="service"/>
+            <argument id="monolog.logger" type="service"/>
+        </service>
+
+        <service class="rombar\PgExplorerBundle\Models\PgAnalyzer" id="rombar_pgexplorerbundle.pganalyzer">
+            <argument id="monolog.logger" type="service"/>
+            <argument id="rombar_pgexplorerbundle.pgretriever" type="service"/>
+            <argument id="rombar_pgexplorerbundle.pgmassretriever" type="service"/>
+        </service>
+
+        <service class="rombar\PgExplorerBundle\Models\sync\SyncHandler" id="rombar_pgexplorerbundle.sync.synchandler" lazy="true">
+            <argument id="session" type="service"/>
+            <argument id="doctrine" type="service"/>
+            <argument id="form.factory" type="service"/>
+            <argument id="router" type="service"/>
+            <argument id="monolog.logger" type="service"/>
+
+        </service>
+
+
+    </services>
+</container>

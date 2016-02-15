@@ -1,0 +1,23 @@
+<div>Nb rows : {{ nbRows }}</div>
+{% if nbRows > 0 %}
+<table summary="Column list" class="table">
+        <thead>
+            <tr>
+                {% for col in columns %}
+                        <th>{{ col }}</th>
+                    {% endfor %}
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in data %}
+                <tr>
+                     {% for cell in row %}
+                        <td>{{ cell }}</td>
+                    {% endfor %}
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+{% elseif message %}
+    <div style="font-weight: bold;">{{ message }}</div>
+{% endif %}

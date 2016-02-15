@@ -1,0 +1,17 @@
+{% extends 'rombarPgExplorerBundle::layout.html.twig' %}
+
+{% block content %}
+    <h2>Sync database</h2>
+    <div style="width:50%;">
+        {{ form(form) }}
+    </div>
+
+    <div id="syncStatus" style="width:50%;">
+
+    </div>
+    <div class="ajaxSpinner"></div>
+{% endblock %}
+
+{% block javascripts %}
+    <script src="{{ asset('js/sync.js') }}"></script>
+{% endblock %}
