@@ -72,7 +72,7 @@ class PgAnalyzer {
     {
 
         $this->initSchemas();
-        
+        $this->logger->addDebug('After Init Schemas : '.(memory_get_usage (true ) / 1048576)." MB");
         foreach ($this->massRetriever->getSchemaElements($schema) as $row) {
             try {
 
@@ -97,7 +97,7 @@ class PgAnalyzer {
                 $this->logger->err($exc->getTraceAsString());
             }
         }
-        
+        $this->logger->addDebug('After getSchemaElements : '.(memory_get_usage (true ) / 1048576)." MB");
         foreach(array_keys($this->schemas) as $schemaName){
             $this->schemas[$schemaName]->setFunctions($this->getFunctionInfo($schemaName));
 
@@ -105,6 +105,7 @@ class PgAnalyzer {
 
 
         }
+        $this->logger->addDebug('After getFunctionInfo : '.(memory_get_usage (true ) / 1048576)." MB");
 
     }
 
@@ -114,22 +115,33 @@ class PgAnalyzer {
     public function initAllTableInfo()
     {
         $this->massRetriever->fillTableColumns($this->schemas);
+        $this->logger->addDebug('After fillTableColumns : '.(memory_get_usage (true ) / 1048576)." MB");
+
         $this->massRetriever->fillTableFk($this->schemas);
+        $this->logger->addDebug('After fillTableFk : '.(memory_get_usage (true ) / 1048576)." MB");
+
         $this->massRetriever->fillParentTables($this->schemas);
+        $this->logger->addDebug('After fillParentTables : '.(memory_get_usage (true ) / 1048576)." MB");
+
         $this->massRetriever->fillChildTables($this->schemas);
+        $this->logger->addDebug('After fillChildTables : '.(memory_get_usage (true ) / 1048576)." MB");
         $this->massRetriever->fillRuleTables($this->schemas);
+        $this->logger->addDebug('After fillRuleTables : '.(memory_get_usage (true ) / 1048576)." MB");
         $this->massRetriever->fillTriggerTables($this->schemas);
+        $this->logger->addDebug('After fillTriggerTables : '.(memory_get_usage (true ) / 1048576)." MB");
         $this->massRetriever->fillReferencedInTables($this->schemas);
+        $this->logger->addDebug('After fillReferencedInTables : '.(memory_get_usage (true ) / 1048576)." MB");
         $this->massRetriever->fillIndexesTables($this->schemas);
 
-
-       /* foreach ($this->schemas as $schemaName => $schema) {
-            foreach ($schema->getTables() as $table) {
-                $this->schemas[$schemaName]->addTable($this->getTableInfo($schemaName, ($this->retriever->getIndexType() == PgRetriever::INDEX_TYPE_OID) ? $table->getOid() : $table->getName()));
-            }
-        }*/
+        $this->logger->addInfo('After fillIndexesTables : '.(memory_get_usage (true ) / 1048576)." MB");
 
         $this->fullyLoaded = true;
+    }
+
+    public function initDefaultTableInfo()
+    {
+        $this->massRetriever->fillParentTables($this->schemas);
+        $this->logger->addDebug('After fillParentTables : '.(memory_get_usage (true ) / 1048576)." MB");
     }
 
     /**

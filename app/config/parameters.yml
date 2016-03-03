@@ -14,19 +14,19 @@ parameters:
     secret: ce77104a903de4531e9e8f97d74a72c11
     pg_database_driver: pdo_pgsql
     pg_database_host: 127.0.0.1
-    pg_database_port: 5432
-    pg_database_name: pagila_prod
-    pg_database_user: barbu
-    pg_database_password: 123456789
+    pg_database_port: 55433
+    pg_database_name: smsc_stats_db
+    pg_database_user: eurovox
+    pg_database_password: null
     pg_prod_database_driver: pdo_pgsql
     pg_prod_database_host: 127.0.0.1
-    pg_prod_database_port: 5432
-    pg_prod_database_name: pagila_prod
-    pg_prod_database_user: barbu
-    pg_prod_database_password: 123456789
+    pg_prod_database_port: 55433
+    pg_prod_database_name: smsc_stats_db
+    pg_prod_database_user: eurovox
+    pg_prod_database_password: null
     pg_preprod_database_driver: pdo_pgsql
     pg_preprod_database_host: 127.0.0.1
-    pg_preprod_database_port: 5432
-    pg_preprod_database_name: pagila
-    pg_preprod_database_user: barbu
-    pg_preprod_database_password: 123456789
+    pg_preprod_database_port: 55433
+    pg_preprod_database_name: smsc_stats_db
+    pg_preprod_database_user: eurovox
+    pg_preprod_database_password: null

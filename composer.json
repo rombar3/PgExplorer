@@ -20,7 +20,8 @@
         "sensio/generator-bundle": "~2.3",
         "incenteev/composer-parameter-handler": "~2.0",
         "symfony/icu": "~1.0",
-        "friendsofsymfony/user-bundle": "~1.2"
+        "friendsofsymfony/user-bundle": "~1.2",
+        "friendsofsymfony/jsrouting-bundle": "~1.6"
     },
     "require-dev": {
       "phpunit/phpunit" : "@stable",

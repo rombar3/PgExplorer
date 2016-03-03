@@ -435,20 +435,38 @@ class PgRetriever {
     public function getParentTables($schema,$tableOid)
     {
         //Inherit
-        $sql = "SELECT c.oid,
-                        c.oid::pg_catalog.regclass as name
-                    FROM pg_catalog.pg_class c, pg_catalog.pg_inherits i
-                    WHERE c.oid=i.inhparent AND i.inhrelid = '" . pg_escape_string($tableOid) . "'
-                    ORDER BY inhseqno";
+        $sql = "
+        WITH RECURSIVE inh AS (
+                   SELECT i.inhrelid, i.inhparent
+                   FROM pg_catalog.pg_inherits i
+                   WHERE i.inhrelid = '" . pg_escape_string($tableOid) . "'
+                   UNION
+                   SELECT i.inhrelid, inh.inhparent
+                   FROM inh INNER JOIN pg_catalog.pg_inherits i ON (inh.inhrelid = i.inhparent)
+            )
+            SELECT n.nspname as schema,
+                   c.oid,
+                   c.oid::pg_catalog.regclass as name,
+                   c.relname as table_name,
+                   --c2.relname as parent_name,
+                   c2.oid as table
+            FROM inh
+                   INNER JOIN pg_catalog.pg_class c ON (inh.inhrelid = c.oid)
+                   INNER JOIN pg_catalog.pg_namespace n ON (c.relnamespace = n.oid)
+                   INNER JOIN pg_catalog.pg_class c2 ON (inh.inhparent = c2.oid)
+        ";
         $rsm = new ResultSetMapping();
         $rsm->addScalarResult('oid', 'oid');
         $rsm->addScalarResult('name', 'name');
+        $rsm->addScalarResult('schema', 'schema');
+        $rsm->addScalarResult('table', 'table');
+        $rsm->addScalarResult('table_name', 'table_name');
         $stmt = $this->em->createNativeQuery($sql, $rsm);
         $stmt->useResultCache(true, self::CACHE_LIFETIME);
 
         $parents = [];
         foreach ($stmt->getResult(AbstractQuery::HYDRATE_ARRAY) as $row) {
-            $child = new ParentTable($schema, $tableOid);
+            $child = new ParentTable($schema, $row['table']);
             foreach ($row as $key => $value) {
                 $child->__set($key, $value);
             }

@@ -18,7 +18,7 @@ class BrowserController extends Controller
 {
 
     /**
-     * @Route("/getTableInfo", name="getTableInfo")
+     * @Route("/getTableInfo", name="browser.getTableInfo", options={"expose"=true})
      * @Method({"POST"})
      * @Template()
      * @param Request $request
@@ -38,7 +38,7 @@ class BrowserController extends Controller
     }
 
     /**
-     * @Route("/getFunctionInfo", name="getFunctionInfo")
+     * @Route("/getFunctionInfo", name="browser.getFunctionInfo", options={"expose"=true})
      * @Method({"POST"})
      * @Template()
      */

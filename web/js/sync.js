@@ -11,7 +11,7 @@ function startSync(){
     if(!syncRunning){
         syncRunning = true;
 
-        $.post('/PgExplorer/web/app_dev.php/sync/compare-structure/step/schemas',
+        $.post(Routing.generate("sync.compareStructure", {step:"schemas"}),
             {},
             function(data) {
 
@@ -30,7 +30,7 @@ function startSync(){
 }
 
 function compareTables(){
-    $.post('/PgExplorer/web/app_dev.php/sync/compare-structure/step/tables',
+    $.post(Routing.generate("sync.compareStructure", {step:"tables"}),
         {},
         function(data) {
 
@@ -50,7 +50,7 @@ function compareTables(){
 }
 
 function compareFunctions(){
-    $.post('/PgExplorer/web/app_dev.php/sync/compare-structure/step/functions',
+    $.post(Routing.generate("sync.compareStructure", {step:"functions"}),
         {},
         function(data) {
 
@@ -70,7 +70,7 @@ function compareFunctions(){
 var keepSyncData = true;
 function syncData(){
 
-    $.post('/PgExplorer/web/app_dev.php/sync/get-weights',
+    $.post(Routing.generate("sync.getWeights"),
         {},
         function(data) {
 
@@ -95,7 +95,7 @@ function syncData(){
 
 function syncWeight(weight, limit,max){
     if(limit == 0){
-        $.ajax({url:'/PgExplorer/web/app_dev.php/sync/sync-data/weight/'+weight+'/limit/'+limit,
+        $.ajax({url:Routing.generate("sync.syncData", {weight:weight,limit:limit}),
             method:'POST',
             async:false,
             success: function(data) {
@@ -118,7 +118,7 @@ function syncWeight(weight, limit,max){
     }else{
         var index = 1;
         while(index <= max){
-            $.ajax({url:'/PgExplorer/web/app_dev.php/sync/sync-data/weight/'+weight+'/limit/'+limit,
+            $.ajax({url:Routing.generate("sync.syncData", {weight:weight,limit:limit}),
                 method:'POST',
                 async:false,
                 success: function(data) {

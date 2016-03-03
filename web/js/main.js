@@ -10,7 +10,7 @@ $().ready(function() {
 });
 
 $(document).ajaxStart(function() {
-    $(".ajaxSpinner").html('<div class="ajaxSpinnerImage" style="width: 100px;background-image:url(\'/PgExplorer/web/css/cupertino/images/animated-overlay.gif\');margin:auto auto;">&nbsp;</div>');
+    $(".ajaxSpinner").html('<div class="ajaxSpinnerImage" style="width: 100px;background-image:url(\'/css/cupertino/images/animated-overlay.gif\');margin:auto auto;">&nbsp;</div>');
     //$( ".ajaxSpinner" ).show();
 
 });
@@ -20,13 +20,13 @@ $(document).ajaxStop(function() {
 
 function showTable(schema, oid) {
     $('#content').addClass('ajaxSpinner');
-    $.post('/PgExplorer/web/app_dev.php/browser/getTableInfo', {schema: schema, oid: oid}, function(data) {
+    $.post(Routing.generate("browser.getTableInfo"), {schema: schema, oid: oid}, function(data) {
         $('#content').html(data)
     });
 }
 
 function showFunction(oid) {
-    $.post('/PgExplorer/web/app_dev.php/browser/getFunctionInfo', {oid: oid}, function(data) {
+    $.post(Routing.generate("browser.getFunctionInfo"), {oid: oid}, function(data) {
         $('#content').html(data);
     });
 }
@@ -76,18 +76,18 @@ function indentRequest() {
 
 function doRequest(option) {
     if (option == 'explain' || option == 'explainAnalyse') {
-        $.post('/PgExplorer/web/app_dev.php/sqlQuery/doExplain', $('#sqlForm').serialize()+((option == 'explainAnalyse')?'&analyse=1':''), function(data) {
+        $.post(Routing.generate("sqlQuery.doExplain"), $('#sqlForm').serialize()+((option == 'explainAnalyse')?'&analyse=1':''), function(data) {
             $('#result').html(data)
         });
     } else {
-        $.post('doRequest', $('#sqlForm').serialize(), function(data) {
+        $.post(Routing.generate("sqlQuery.doRequest"), $('#sqlForm').serialize(), function(data) {
             $('#result').html(data)
         });
     }
 }
 
 function generateSQL() {
-    $.post('/PgExplorer/web/app_dev.php/sqlQuery/generateSql',
+    $.post(Routing.generate("sqlQuery.generateSql"),
             $('#generateSQLForm').serialize(),
             function(data) {
                 if (data.sql != '') {
@@ -126,10 +126,10 @@ function initSQLGenerator() {
     $('#table').autocomplete({
         minLength: 2,
         delay: 500,
-        source: "/PgExplorer/web/app_dev.php/sqlQuery/autocomplete?population=table",
+        source: Routing.generate("sqlQuery.autocomplete")+"?population=table",
         select: function(event, ui) {
 
-            $.post("/PgExplorer/web/app_dev.php/sqlQuery/addToSqlGenerator",
+            $.post(Routing.generate("sqlQuery.addToSqlGenerator"),
                     {elmt: 'table', id: ui.item.id},
             function(data) {
                 if (data.ok) {
@@ -143,10 +143,10 @@ function initSQLGenerator() {
                     $('#' + id + ' .joinTable').autocomplete({
                         minLength: 2,
                         delay: 500,
-                        source: "/PgExplorer/web/app_dev.php/sqlQuery/autocomplete?population=generatorJoinTable&table=" + $('#' + id).attr('table') + "&schema=" + $('#' + id).attr('schema'),
+                        source: Routing.generate("sqlQuery.autocomplete")+"?population=generatorJoinTable&table=" + $('#' + id).attr('table') + "&schema=" + $('#' + id).attr('schema'),
                         select: function(event, ui) {
 
-                            $.post("addToSqlGenerator",
+                            $.post(Routing.generate("sqlQuery.addToSqlGenerator"),
                                     {elmt: 'joinTable', id: ui.item.id, table: ui.item.value},
                             function(data) {
                                 if (data.ok) {
@@ -172,10 +172,10 @@ function initSQLGenerator() {
     $('#column').autocomplete({
         minLength: 2,
         delay: 500,
-        source: "/PgExplorer/web/app_dev.php/sqlQuery/autocomplete?population=generatorCol",
+        source: Routing.generate("sqlQuery.autocomplete")+"?population=generatorCol",
         select: function(event, ui) {
 
-            $.post("/PgExplorer/web/app_dev.php/sqlQuery/addToSqlGenerator",
+            $.post(Routing.generate("addToSqlGenerator"),
                     {elmt: 'column', id: ui.item.id},
             function(data) {
                 if (data.ok) {
@@ -194,10 +194,10 @@ function initSQLGenerator() {
     $('#groupBy').autocomplete({
         minLength: 1,
         delay: 500,
-        source: "/PgExplorer/web/app_dev.php/sqlQuery/autocomplete?population=generatorGroupBy",
+        source: Routing.generate("sqlQuery.autocomplete")+"?population=generatorGroupBy",
         select: function(event, ui) {
 
-            $.post("/PgExplorer/web/app_dev.php/sqlQuery/addToSqlGenerator",
+            $.post(Routing.generate("addToSqlGenerator"),
                     {elmt: 'groupBy', id: ui.item.id},
             function(data) {
                 if (data.ok) {
@@ -214,10 +214,10 @@ function initSQLGenerator() {
     $('#orderBy').autocomplete({
         minLength: 1,
         delay: 500,
-        source: "/PgExplorer/web/app_dev.php/sqlQuery/autocomplete?population=generatorOrderBy",
+        source: Routing.generate("sqlQuery.autocomplete")+"?population=generatorOrderBy",
         select: function(event, ui) {
 
-            $.post("/PgExplorer/web/app_dev.php/sqlQuery/addToSqlGenerator",
+            $.post(Routing.generate("addToSqlGenerator"),
                     {elmt: 'orderBy', id: ui.item.id},
             function(data) {
                 if (data.ok) {

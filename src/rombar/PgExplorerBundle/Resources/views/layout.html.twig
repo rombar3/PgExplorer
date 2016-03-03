@@ -30,7 +30,7 @@
     </div>
 </nav>
 {% endblock %}
-<div style="width:10%;height:100%;margin-top: 3%;">
+<div style="width:10%;height:100%;margin-top: 3%;float:left;">
             {% block leftMenu %}
     <ul id="leftMenu">
                         {% for schema in schemas %}
@@ -95,12 +95,12 @@
 
             {% endblock %}
 </div>
-<div id="content" style="width:80%;float:right;">{% block content %}{% endblock %}</div>
+<div id="content" style="width:80%;float:right;margin-right:5%;">{% block content %}{% endblock %}</div>
 <script src="{{ asset('js/jquery-1.9.1.js') }}" type="text/javascript"></script>
 <script src="{{ asset('js/jquery-ui-1.10.3.custom.min.js') }}" type="text/javascript"></script>
 <script src="{{ asset('js/main.js') }}" type="text/javascript"></script>
 <script src="{{ asset('js/bootstrap.min.js') }}"></script>
 {% block javascripts %}{% endblock %}
-
-
+     <script src="{{ asset('bundles/fosjsrouting/js/router.js') }}"></script>
+     <script src="{{ path('fos_js_routing_js', {"callback": "fos.Router.setData"}) }}"></script>
 {% endblock %}

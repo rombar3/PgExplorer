@@ -20,7 +20,7 @@ class DefaultController extends Controller {
     {
         $pgAnalyzer = $this->get('rombar_pgexplorerbundle.pganalyzer');
         $pgAnalyzer->initSchemasElements();
-        $pgAnalyzer->initAllTableInfo();
+        $pgAnalyzer->initDefaultTableInfo();
 
         return array('schemas' => $pgAnalyzer->getSchemas());
     }

@@ -21,6 +21,7 @@ class AppKernel extends Kernel
             new rombar\adminBundle\rombarAdminBundle(),
             new rombar\UserBundle\rombarUserBundle(),
             new rombar\PgExplorerBundle\rombarPgExplorerBundle(),
+            new FOS\JsRoutingBundle\FOSJsRoutingBundle(),
         );
 
         if (in_array($this->getEnvironment(), array('dev', 'test'))) {
@@ -28,7 +29,7 @@ class AppKernel extends Kernel
             $bundles[] = new Sensio\Bundle\DistributionBundle\SensioDistributionBundle();
             $bundles[] = new Sensio\Bundle\GeneratorBundle\SensioGeneratorBundle();
         }
-
+        ini_set('memory_limit', '1024M');
         return $bundles;
     }
 

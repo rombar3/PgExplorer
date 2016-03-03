@@ -38,7 +38,7 @@ class SqlQueryController extends Controller
     }
 
     /**
-     * @Route("/doRequest", name="doRequest")
+     * @Route("/doRequest", name="sqlQuery.doRequest", options={"expose"=true})
      * @Method({"POST"})
      * @Template()
      */
@@ -83,7 +83,7 @@ class SqlQueryController extends Controller
     }
 
     /**
-     * @Route("/doExplain", name="doExplain")
+     * @Route("/doExplain", name="sqlQuery.doExplain", options={"expose"=true})
      * @Method({"POST"})
      * @Template()
      */
@@ -96,7 +96,7 @@ class SqlQueryController extends Controller
         $results = null;
         if ($request->isXmlHttpRequest()) {
             try {
-                $results = $em->executeQuery('EXPLAIN '. (($analyse) ? 'ANALYZE ' : ''). $sql)
+                $results = $em->getConnection()->executeQuery('EXPLAIN '. (($analyse) ? 'ANALYZE ' : ''). $sql)
                     ->fetchAll(\PDO::FETCH_ASSOC);
             } catch (\Exception $e) {
                 return new Response('This query cannot be explained.');
@@ -107,7 +107,7 @@ class SqlQueryController extends Controller
     }
 
     /**
-     * @Route("/addToSqlGenerator", name="addToSqlGenerator")
+     * @Route("/addToSqlGenerator", name="sqlQuery.addToSqlGenerator", options={"expose"=true})
      * @Method({"POST"})
      * @return Response
      */
@@ -138,7 +138,7 @@ class SqlQueryController extends Controller
     }
 
     /**
-     * @Route("/generateSql", name="generateSql")
+     * @Route("/generateSql", name="sqlQuery.generateSql", options={"expose"=true})
      * @Method({"POST"})
      * @return Response
      */
@@ -159,7 +159,7 @@ class SqlQueryController extends Controller
     }
 
     /**
-     * @Route("/autocomplete", name="autocomplete")
+     * @Route("/autocomplete", name="sqlQuery.autocomplete", options={"expose"=true})
      * @Method({"GET"})
      *
      * @param Request $request

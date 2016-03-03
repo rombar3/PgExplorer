@@ -40,7 +40,7 @@ class SyncController extends Controller
 
     /**
      * @param Request $request
-     * @Route("/startSync", name="sync.startSync")
+     * @Route("/startSync", name="sync.startSync", options={"expose"=true})
      * @Method({"POST"})
      * @Template()
      * @return array
@@ -65,6 +65,7 @@ class SyncController extends Controller
      *          name="sync.compareStructure",
      *          condition="request.headers.get('X-Requested-With') == 'XMLHttpRequest'",
      *          requirements = {"step" = "^(schemas|tables|functions)$"}
+     *          , options={"expose"=true}
      * )
      * @Method({"POST"})
      * @return Response
@@ -96,6 +97,7 @@ class SyncController extends Controller
      * @Route("/get-weights",
      *          name="sync.getWeights",
      *          condition="request.headers.get('X-Requested-With') == 'XMLHttpRequest'",
+     *          options={"expose"=true}
      * )
      * @Method({"POST"})
      * @return Response
@@ -137,6 +139,7 @@ class SyncController extends Controller
      *          name="sync.syncData",
      *          condition="request.headers.get('X-Requested-With') == 'XMLHttpRequest'",
      *          requirements = {"schema" = "^[a-z_\-0-9]+$", "limit" = "^[0-9]+$"}
+     *          , options={"expose"=true}
      * )
      * @Method({"POST"})
      */

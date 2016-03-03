@@ -123,13 +123,13 @@
                     event.preventDefault();
                    $('#errorExport, #successExport').hide();
 
-                    $.get('/PgExplorer/web/app_dev.php/graphic/export-neo4j',
+                    $.get('/app_dev.php/graphic/export-neo4j',
                         {},
                         function(data){
                             if(data.ok == 1){
                                 $('#successExport').find('.panel-title:first').html(data.message);
                                 $('#successExport').show();
-                                var html = '<ul><li><a href="/PgExplorer/web/app_dev.php/graphic/download-csv/file/'+data.files.nodes+'">Nodes</a></li><li><a href="/PgExplorer/web/app_dev.php/graphic/download-csv/file/'+data.files.links+'">Links</a></li><ul>';
+                                var html = '<ul><li><a href="/app_dev.php/graphic/download-csv/file/'+data.files.nodes+'">Nodes</a></li><li><a href="/app_dev.php/graphic/download-csv/file/'+data.files.links+'">Links</a></li><ul>';
                                 html += '<pre>"E:\Neo4j Community\bin\Neo4jImport.bat" --into C:\Users\Romain\Documents\Neo4j\database.graphdb --nodes export_nodes.csv --relationships export_links.csv --array-delimiter "|"</pre>';
                                 $('#successExport').find('.panel-body:first').html(html);
                             }else{

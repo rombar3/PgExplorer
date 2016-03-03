@@ -83,7 +83,7 @@ class GraphicController extends Controller
     }
 
     /**
-     * @Route("/getTree", name="getTree")
+     * @Route("/getTree", name="getTree", options={"expose"=true})
      * @Method({"POST"})
      * @Template()
      */

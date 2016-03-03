@@ -13,6 +13,7 @@ use Doctrine\ORM\AbstractQuery;
 use Doctrine\ORM\Query\ResultSetMapping;
 use Doctrine\ORM\EntityManager;
 use \Monolog\Logger;
+use rombar\PgExplorerBundle\Exceptions\ElementNotFoundException;
 use rombar\PgExplorerBundle\Models\dbElements\ChildTable;
 use rombar\PgExplorerBundle\Models\dbElements\Column;
 use rombar\PgExplorerBundle\Models\dbElements\Fonction;
@@ -123,6 +124,7 @@ class PgMassRetriever
      */
     public function getSchemaElements($schema)
     {
+        $this->em->clear();
         $sql = "SELECT n.nspname as schema,
                 c.relname as name,
                 CASE c.relkind WHEN 'r' THEN 'table'
@@ -149,7 +151,7 @@ class PgMassRetriever
                     AND n.nspname <> 'pg_catalog'
                     AND n.nspname <> 'information_schema'
                     AND n.nspname !~ '^pg_toast'
-                    AND pg_catalog.pg_table_is_visible(c.oid)
+                    --AND pg_catalog.pg_table_is_visible(c.oid)
                     " . (($schema != '') ? " AND n.nspname = '" . pg_escape_string($schema) . "'" : '') . "
               ORDER BY 1,3,2";
 
@@ -196,6 +198,7 @@ class PgMassRetriever
      */
     public function fillTableColumns(&$schemas)
     {
+        $this->em->clear();
         $sql = "SELECT n.nspname as schema,
                     a.attrelid as table,
                     c.relname as table_name,
@@ -217,7 +220,7 @@ class PgMassRetriever
                     AND n.nspname <> 'pg_catalog'
                     AND n.nspname <> 'information_schema'
                     AND n.nspname !~ '^pg_toast'
-                    AND pg_catalog.pg_table_is_visible(c.oid)
+                    --AND pg_catalog.pg_table_is_visible(c.oid)
                   ORDER BY n.nspname, a.attrelid, a.attnum
                         ";
         $rsm = new ResultSetMapping();
@@ -247,8 +250,9 @@ class PgMassRetriever
             }elseif($this->index_type == PgRetriever::INDEX_TYPE_NAME){
                 $schemas[$row['schema']]->addTableColumn($row['table_name'], $column);
             }
-
+            unset($column);
         }
+        unset($stmt);
     }
 
     /**
@@ -256,45 +260,57 @@ class PgMassRetriever
      */
     public function fillTableFk(&$schemas)
     {
+        $this->em->clear();
         //Foreign Keys
-        $sql = "SELECT n.nspname as schema,
-                    r.conrelid as table,
-                    c.relname as table_name,
-                    r.conname as name,
-                    r.conname as oid,
-                    r.confrelid as \"parentTable\",
-                    CASE WHEN confupdtype = 'a' THEN 'no action'
-                         WHEN confupdtype = 'r' THEN 'restrict'
-                         WHEN confupdtype = 'c' THEN 'cascade'
-                         WHEN confupdtype = 'n' THEN 'set null'
-                         WHEN confupdtype = 'd' THEN 'set default'
-                         ELSE NULL::text
-                    END as  \"updateType\",
-                    CASE WHEN confdeltype = 'a' THEN 'no action'
-                         WHEN confdeltype = 'r' THEN 'restrict'
-                         WHEN confdeltype = 'c' THEN 'cascade'
-                         WHEN confdeltype = 'n' THEN 'set null'
-                         WHEN confdeltype = 'd' THEN 'set default'
-                         ELSE NULL::text
-                    END as  \"deleteType\",
-                    CASE WHEN confmatchtype = 'f' THEN 'full'
-                        WHEN confmatchtype = 'p' THEN 'partial'
-                        WHEN confmatchtype = 'u' THEN 'simple'
-                        ELSE NULL::text
-                    END as \"matchType\",
-                    r.conkey as \"cols\",
-                    r.confkey as \"refCols\",
-                pg_catalog.pg_get_constraintdef(r.oid, true) as \"creationQuery\"
-            FROM pg_catalog.pg_constraint r
-              INNER JOIN pg_catalog.pg_class c ON c.oid = r.confrelid
-              INNER JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
-            WHERE  r.contype = 'f'
-                AND c.relkind = 'r'
-                AND n.nspname <> 'pg_catalog'
-                AND n.nspname <> 'information_schema'
-                AND n.nspname !~ '^pg_toast'
-                AND pg_catalog.pg_table_is_visible(c.oid)
-            ORDER BY 1";
+        $sql = "SELECT n2.nspname as schema,
+               c2.oid as table,
+               c2.relname as table_name,
+               r.conname as name,
+               r.conname as oid,
+               r.confrelid as \"parentTable\",
+               CASE WHEN confupdtype = 'a' THEN 'no action'
+               WHEN confupdtype = 'r' THEN 'restrict'
+               WHEN confupdtype = 'c' THEN 'cascade'
+               WHEN confupdtype = 'n' THEN 'set null'
+               WHEN confupdtype = 'd' THEN 'set default'
+               ELSE NULL::text
+               END as  \"updateType\",
+               CASE WHEN confdeltype = 'a' THEN 'no action'
+               WHEN confdeltype = 'r' THEN 'restrict'
+               WHEN confdeltype = 'c' THEN 'cascade'
+               WHEN confdeltype = 'n' THEN 'set null'
+               WHEN confdeltype = 'd' THEN 'set default'
+               ELSE NULL::text
+               END as  \"deleteType\",
+               CASE WHEN confmatchtype = 'f' THEN 'full'
+               WHEN confmatchtype = 'p' THEN 'partial'
+               WHEN confmatchtype = 'u' THEN 'simple'
+               ELSE NULL::text
+               END as \"matchType\",
+               r.conkey as \"cols\",
+               r.confkey as \"refCols\",
+               pg_catalog.pg_get_constraintdef(r.oid, true) as \"creationQuery\"
+        FROM pg_catalog.pg_constraint r
+               INNER JOIN pg_catalog.pg_class c ON c.oid = r.confrelid
+                                                   AND c.relkind = 'r' --AND pg_catalog.pg_table_is_visible(c.oid)
+               INNER JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
+                                                       AND n.nspname <> 'pg_catalog'
+                                                       AND n.nspname <> 'information_schema'
+                                                       AND n.nspname !~ '^pg_toast'
+                                                       AND n.nspname !~ '^pg_temp'
+                                                       AND n.nspname <> 'londiste'
+                                                       AND n.nspname <> 'pgq'
+               INNER JOIN pg_catalog.pg_class c2 ON c2.oid = r.conrelid AND c2.relkind = 'r' --AND pg_catalog.pg_table_is_visible(c2.oid)
+               INNER JOIN pg_catalog.pg_namespace n2 ON n2.oid = c2.relnamespace
+                                                       AND n2.nspname <> 'pg_catalog'
+                                                       AND n2.nspname <> 'information_schema'
+                                                       AND n2.nspname !~ '^pg_toast'
+                                                       AND n2.nspname !~ '^pg_temp'
+                                                       AND n2.nspname <> 'londiste'
+                                                       AND n2.nspname <> 'pgq'
+        WHERE  r.contype = 'f'
+
+        ORDER BY 1";
         $rsm = new ResultSetMapping();
         $rsm->addScalarResult('oid', 'oid');
         $rsm->addScalarResult('name', 'name');
@@ -323,33 +339,39 @@ class PgMassRetriever
             }elseif($this->index_type == PgRetriever::INDEX_TYPE_NAME){
                 $schemas[$row['schema']]->addTableFk($row['table_name'], $foreignKey);
             }
+            unset($foreignKey);
         }
+        unset($stmt);
     }
 
     public function fillParentTables(&$schemas)
     {
+        $this->em->clear();
         //Inherit
-        $sql = "SELECT n.nspname as schema,
-                        c.oid,
-                        c.oid::pg_catalog.regclass as name,
-                        c2.relname as table_name,
-                        i.inhrelid as table
-                    FROM pg_catalog.pg_class c
-                      INNER JOIN pg_catalog.pg_inherits i ON c.oid = i.inhparent
-                      INNER JOIN pg_catalog.pg_class c2 ON c2.oid = i.inhparent
-                      INNER JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
-                    WHERE c2.relkind = 'r'
-                        AND n.nspname <> 'pg_catalog'
-                        AND n.nspname <> 'information_schema'
-                        AND n.nspname !~ '^pg_toast'
-                        AND pg_catalog.pg_table_is_visible(c2.oid)
-                    ORDER BY inhseqno";
+        $sql = "WITH RECURSIVE inh AS (
+                   SELECT i.inhrelid, i.inhparent
+                   FROM pg_catalog.pg_inherits i
+                   UNION
+                   SELECT i.inhrelid, inh.inhparent
+                   FROM inh INNER JOIN pg_catalog.pg_inherits i ON (inh.inhrelid = i.inhparent)
+            )
+            SELECT n.nspname as schema,
+                   c.oid,
+                   c.oid::pg_catalog.regclass as name,
+                   c.relname as table_name,
+                   --c2.relname as parent_name,
+                   c2.oid as table
+            FROM inh
+                   INNER JOIN pg_catalog.pg_class c ON (inh.inhrelid = c.oid)
+                   INNER JOIN pg_catalog.pg_namespace n ON (c.relnamespace = n.oid)
+                   INNER JOIN pg_catalog.pg_class c2 ON (inh.inhparent = c2.oid)";
         $rsm = new ResultSetMapping();
         $rsm->addScalarResult('oid', 'oid');
         $rsm->addScalarResult('name', 'name');
         $rsm->addScalarResult('schema', 'schema');
         $rsm->addScalarResult('table', 'table');
         $rsm->addScalarResult('table_name', 'table_name');
+
 
         $stmt = $this->em->createNativeQuery($sql, $rsm);
         $stmt->useResultCache(true, PgRetriever::CACHE_LIFETIME);
@@ -361,11 +383,13 @@ class PgMassRetriever
             }
 
             if($this->index_type == PgRetriever::INDEX_TYPE_OID){
-                $schemas[$row['schema']]->addTableParentTable($row['table'], $child);
+                $schemas[$row['schema']]->addTableParentTable($row['oid'], $child);
             }elseif($this->index_type == PgRetriever::INDEX_TYPE_NAME){
                 $schemas[$row['schema']]->addTableParentTable($row['table_name'], $child);
             }
+            unset($child);
         }
+        unset($stmt);
     }
 
     /**
@@ -373,6 +397,7 @@ class PgMassRetriever
      */
     public function fillChildTables(&$schemas)
     {
+        $this->em->clear();
         //Child tables
         $sql = " SELECT c.oid,
                         c.oid::pg_catalog.regclass as name,
@@ -387,7 +412,7 @@ class PgMassRetriever
                     AND n.nspname <> 'pg_catalog'
                     AND n.nspname <> 'information_schema'
                     AND n.nspname !~ '^pg_toast'
-                    AND pg_catalog.pg_table_is_visible(c2.oid)
+                    --AND pg_catalog.pg_table_is_visible(c2.oid)
                 ORDER BY c.oid::pg_catalog.regclass::pg_catalog.text";
         $rsm = new ResultSetMapping();
         $rsm->addScalarResult('oid', 'oid');
@@ -411,7 +436,9 @@ class PgMassRetriever
             }elseif($this->index_type == PgRetriever::INDEX_TYPE_NAME){
                 $schemas[$row['schema']]->addTableChildTable($row['table_name'], $child);
             }
+            unset($child);
         }
+        unset($stmt);
     }
 
     /**
@@ -419,6 +446,7 @@ class PgMassRetriever
      */
     public function fillRuleTables(&$schemas)
     {
+        $this->em->clear();
         //Rules
         $sql = "SELECT r.rulename as oid,
                                 r.rulename as name,
@@ -434,7 +462,7 @@ class PgMassRetriever
                             AND n.nspname <> 'pg_catalog'
                             AND n.nspname <> 'information_schema'
                             AND n.nspname !~ '^pg_toast'
-                            AND pg_catalog.pg_table_is_visible(c.oid)
+                            --AND pg_catalog.pg_table_is_visible(c.oid)
                         ORDER BY 1";
         $rsm = new ResultSetMapping();
         $rsm->addScalarResult('oid', 'oid');
@@ -461,7 +489,9 @@ class PgMassRetriever
             }elseif($this->index_type == PgRetriever::INDEX_TYPE_NAME){
                 $schemas[$row['schema']]->addTableRule($row['table_name'], $rule);
             }
+            unset($rule);
         }
+        unset($stmt);
     }
 
     /**
@@ -469,6 +499,7 @@ class PgMassRetriever
      */
     public function fillTriggerTables(&$schemas)
     {
+        $this->em->clear();
         //Triggers
         $sql = "SELECT t.tgname as name,
                                 t.oid as oid,
@@ -488,7 +519,7 @@ class PgMassRetriever
                             AND n.nspname <> 'pg_catalog'
                             AND n.nspname <> 'information_schema'
                             AND n.nspname !~ '^pg_toast'
-                            AND pg_catalog.pg_table_is_visible(c.oid)
+                            --AND pg_catalog.pg_table_is_visible(c.oid)
                         ORDER BY 1";
         $rsm = new ResultSetMapping();
         $rsm->addScalarResult('oid', 'oid');
@@ -515,7 +546,9 @@ class PgMassRetriever
             }elseif($this->index_type == PgRetriever::INDEX_TYPE_NAME){
                 $schemas[$row['schema']]->addTableTrigger($row['table_name'], $trigger);
             }
+            unset($trigger);
         }
+        unset($stmt);
     }
 
     /**
@@ -523,6 +556,7 @@ class PgMassRetriever
      */
     public function fillReferencedInTables(&$schemas)
     {
+        $this->em->clear();
         //Get Table referencing this table
         $sql = "SELECT r.conrelid as oid,
                     r.confrelid as table,
@@ -536,7 +570,7 @@ class PgMassRetriever
                     AND n.nspname <> 'pg_catalog'
                     AND n.nspname <> 'information_schema'
                     AND n.nspname !~ '^pg_toast'
-                    AND pg_catalog.pg_table_is_visible(c.oid)
+                    --AND pg_catalog.pg_table_is_visible(c.oid)
                 ORDER BY 1";
         $rsm = new ResultSetMapping();
         $rsm->addScalarResult('oid', 'oid');
@@ -549,11 +583,14 @@ class PgMassRetriever
 
         foreach ($stmt->getResult(AbstractQuery::HYDRATE_ARRAY) as $row) {
             $schemas[$row['schema']]->addTableReferenced($row['table'], $row['oid']);
+
         }
+        unset($stmt);
     }
 
     public function fillIndexesTables(&$schemas)
     {
+        $this->em->clear();
         //Filling Indexes
         $sql = "SELECT c2.relname as name,
                                 c2.relname as oid,
@@ -579,7 +616,7 @@ class PgMassRetriever
                         AND n.nspname <> 'pg_catalog'
                         AND n.nspname <> 'information_schema'
                         AND n.nspname !~ '^pg_toast'
-                        AND pg_catalog.pg_table_is_visible(c.oid)
+                        --AND pg_catalog.pg_table_is_visible(c.oid)
                     ORDER BY i.indisprimary DESC,
                         i.indisunique DESC,
                         c2.relname";
@@ -632,6 +669,8 @@ class PgMassRetriever
                 $schemas[$row['schema']]->addTableIndex($row['table_name'], $index);
             }
 
+            unset($index);
         }
+        unset($stmt);
     }
 }
