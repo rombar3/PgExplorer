@@ -23,6 +23,10 @@ class Column extends PgElement{
 
     protected $attcollation;
 
+    protected $tableName;
+
+    protected $realPosition;
+
     public function __construct($schema)
     {
         $this->schema = $schema;
@@ -126,6 +130,38 @@ class Column extends PgElement{
     public function setAttcollation($attcollation)
     {
         $this->attcollation = $attcollation;
+    }
+
+    /**
+     * @return mixed
+     */
+    public function getTableName()
+    {
+        return $this->tableName;
+    }
+
+    /**
+     * @param mixed $tableName
+     */
+    public function setTableName($tableName)
+    {
+        $this->tableName = $tableName;
+    }
+
+    /**
+     * @return mixed
+     */
+    public function getRealPosition()
+    {
+        return $this->realPosition;
+    }
+
+    /**
+     * @param mixed $realPosition
+     */
+    public function setRealPosition($realPosition)
+    {
+        $this->realPosition = $realPosition;
     }
 
 }

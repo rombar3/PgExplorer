@@ -20,13 +20,13 @@ parameters:
     pg_database_password: null
     pg_prod_database_driver: pdo_pgsql
     pg_prod_database_host: 127.0.0.1
-    pg_prod_database_port: 55433
+    pg_prod_database_port: 8889
     pg_prod_database_name: smsc_stats_db
     pg_prod_database_user: eurovox
     pg_prod_database_password: null
     pg_preprod_database_driver: pdo_pgsql
     pg_preprod_database_host: 127.0.0.1
-    pg_preprod_database_port: 55433
+    pg_preprod_database_port: 8887
     pg_preprod_database_name: smsc_stats_db
     pg_preprod_database_user: eurovox
-    pg_preprod_database_password: null
+    pg_preprod_database_password: 123456789

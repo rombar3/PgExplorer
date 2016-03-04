@@ -26,6 +26,8 @@ class PgAnalyzer {
 
     private $fullyLoaded = false;
 
+    private $searchPath = [];
+
     /**
      * @var PgRetriever
      */
@@ -64,6 +66,7 @@ class PgAnalyzer {
         if($this->nbSchemas == 0){
             $this->schemas = $this->massRetriever->getSchemas();
             $this->nbSchemas = count($this->schemas);
+            $this->searchPath = $this->massRetriever->getSearchPath();
         }
 
     }
@@ -92,9 +95,9 @@ class PgAnalyzer {
                 }
             } catch (\Exception $exc) {
 
-                $this->logger->info('Not possible to add the element of type ' . $row['type'] . ' : ' . $row['name']);
-                $this->logger->err($exc->getMessage());
-                $this->logger->err($exc->getTraceAsString());
+                $this->logger->info('Not possible to add the element of type ' . $row['type'] . ' in schema '.$row['schema'].' : ' . $row['name'], $exc->getTrace());
+                $this->logger->addError($exc->getMessage());
+                //$this->logger->err($exc->getTraceAsString());
             }
         }
         $this->logger->addDebug('After getSchemaElements : '.(memory_get_usage (true ) / 1048576)." MB");
@@ -136,6 +139,12 @@ class PgAnalyzer {
         $this->logger->addInfo('After fillIndexesTables : '.(memory_get_usage (true ) / 1048576)." MB");
 
         $this->fullyLoaded = true;
+    }
+
+    public function initCompareTableInfo()
+    {
+        $this->massRetriever->fillTableColumns($this->schemas);
+        $this->logger->addDebug('After fillTableColumns : '.(memory_get_usage (true ) / 1048576)." MB");
     }
 
     public function initDefaultTableInfo()
@@ -386,6 +395,20 @@ class PgAnalyzer {
     }
 
     /**
+     * @param $schemaName
+     * @return int
+     * @throws ElementNotFoundException
+     */
+    public function nbTablesInSchema($schemaName)
+    {
+        if(isset($this->schemas[$schemaName])){
+            return count($this->schemas[$schemaName]->getTables());
+        }else{
+            throw new ElementNotFoundException('Schema does not exist : '.$schemaName);
+        }
+    }
+
+    /**
      * @return array
      */
     public function getSchemaNames()
@@ -399,6 +422,14 @@ class PgAnalyzer {
             $schema->indexByName();
             $this->schemas[$key] = $schema;
         }
+    }
+
+    /**
+     * @return array
+     */
+    public function getSearchPath()
+    {
+        return $this->searchPath;
     }
 
 }

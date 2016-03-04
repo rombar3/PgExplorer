@@ -83,10 +83,10 @@ class SyncController extends Controller
             }
         }catch (StructureException $ex){
             $data = $handler->getReport($ex->getMessage());
+            $this->get('logger')->addError($ex->getMessage(), $ex->getTrace());
         }catch (\Exception $ex){
             $data = ["ok" => 0, "message" => "Technical error"];
-            $this->get('logger')->addError($ex->getMessage());
-            $this->get('logger')->addError($ex->getTraceAsString());
+            $this->get('logger')->addError($ex->getMessage(), $ex->getTrace());
         }
 
         return new Response(json_encode($data));

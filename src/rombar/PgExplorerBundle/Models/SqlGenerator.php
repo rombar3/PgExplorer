@@ -12,13 +12,19 @@ use rombar\PgExplorerBundle\Models\dbElements\Table;
 class SqlGenerator {
 
     private $columns = [];
+
     private $tables = [];
+
     private $joins = [];
+
     private $groupBy = [];
+
     private $orderBy = [];
+
     private $tableAlias = [];
 
-    private function generateTableAlias($tableName) {
+    private function generateTableAlias($tableName)
+    {
         $alias = '';
         $alias2 = '';
 
@@ -63,7 +69,8 @@ class SqlGenerator {
      * @return string
      * @throws \Exception
      */
-    private function getJoinCriteria(Table $table, Table $parentTable, $strict = false) {
+    private function getJoinCriteria(Table $table, Table $parentTable, $strict = false)
+    {
         $libelle = '';
 
         //Look for the FK object
@@ -133,7 +140,8 @@ class SqlGenerator {
      * @throws Exception
      * @throws \Exception
      */
-    public function addAnElement(PgAnalyzer $pgAnalyzer, $name, $id, $parent = '') {
+    public function addAnElement(PgAnalyzer $pgAnalyzer, $name, $id, $parent = '')
+    {
         $libelle = '';
         switch ($name) {
             case 'table':
@@ -222,25 +230,29 @@ class SqlGenerator {
                 break;
             default:
                 throw new \Exception('Unknown element : ' . $name);
-                break;
         }
         return $libelle;
     }
 
-    public function searchColumnForAutocomplete($colName) {
+    public function searchColumnForAutocomplete($colName)
+    {
         $data = [];
 
         foreach ($this->tables as $id => $table) {
             foreach ($table->getColumns() as $col) {
 
-                if (preg_match('#^' . $colName . '#i', $col->getName()) || preg_match('#^' . $colName . '#i', $table->getName() . '.' . $col->getName()) || preg_match('#^' . $colName . '#i', $table->getAlias() . '.' . $col->getName())) {
+                if (preg_match('#^' . $colName . '#i', $col->getName())
+                    || preg_match('#^' . $colName . '#i', $table->getName() . '.' . $col->getName())
+                    || preg_match('#^' . $colName . '#i', $table->getAlias() . '.' . $col->getName())) {
                     $data[] = array('id' => $id . ';' . $col->getOid(), 'label' => $table->getAlias() . '.' . $col->getName());
                 }
             }
             if ($table->getJoins()) {
                 foreach ($table->getJoins() as $position => $join) {
                     foreach ($join->getColumns() as $col) {
-                        if (preg_match('#^' . $colName . '#i', $col->getName()) || preg_match('#^' . $colName . '#i', $join->getName() . '.' . $col->getName()) || preg_match('#^' . $colName . '#i', $join->getAlias() . '.' . $col->getName())) {
+                        if (preg_match('#^' . $colName . '#i', $col->getName())
+                            || preg_match('#^' . $colName . '#i', $join->getName() . '.' . $col->getName())
+                            || preg_match('#^' . $colName . '#i', $join->getAlias() . '.' . $col->getName())) {
                             $data[] = array('id' => $id . '-' . $position . ';' . $col->getOid(), 'label' => $join->getAlias() . '.' . $col->getName());
                         }
                     }
@@ -250,7 +262,8 @@ class SqlGenerator {
         return $data;
     }
 
-    public function searchGroupByForAutocomplete($colName) {
+    public function searchGroupByForAutocomplete($colName)
+    {
         $data = [];
         if (preg_match('#^[1-9]{1}[0-9]*$#', intval($colName)) && count($this->columns) >= intval($colName)) {
             $data[] = array('id' => intval($colName), 'label' => intval($colName));
@@ -265,7 +278,8 @@ class SqlGenerator {
         return $data;
     }
 
-    public function searchOrderByForAutocomplete($colName) {
+    public function searchOrderByForAutocomplete($colName)
+    {
         $data = [];
 
         if (preg_match('#^[1-9]{1}[0-9]*$#', intval($colName)) && count($this->columns) >= intval($colName)) {
@@ -289,7 +303,8 @@ class SqlGenerator {
      * @param PgAnalyzer $pgAnalyzer
      * @return array
      */
-    public function searchJoinTableForAutocomplete($term, $schemaName, $tableName, PgAnalyzer $pgAnalyzer) {
+    public function searchJoinTableForAutocomplete($term, $schemaName, $tableName, PgAnalyzer $pgAnalyzer)
+    {
         $parentTable = null;
         $data = [];
         //Get parent table
@@ -305,7 +320,13 @@ class SqlGenerator {
         //Search $term among tables linked to the parent table
 
         foreach ($this->getProximityTablesFrom($parentTable, $pgAnalyzer) as $table) {
-            if ($table && (empty($term) || preg_match('#^' . $term . '#i', $table->getName()) || preg_match('#^' . $term . '#i', $table->getSchema() . '.' . $table->getName()))) {
+            if ($table
+                && (
+                    empty($term)
+                    || preg_match('#^' . $term . '#i', $table->getName())
+                    || preg_match('#^' . $term . '#i', $table->getSchema() . '.' . $table->getName())
+                )
+            ) {
                 $data[] = array('id' => $table->getSchema() . ';' . $table->getOid(), 'label' => $table->getSchema() . '.' . $table->getName(), 'value' => $parentTable->getOid());
             }
         }
@@ -319,7 +340,8 @@ class SqlGenerator {
      * @param PgAnalyzer $pgAnalyzer
      * @return array<Table>
      */
-    private function getProximityTablesFrom(Table $parentTable, PgAnalyzer $pgAnalyzer) {
+    private function getProximityTablesFrom(Table $parentTable, PgAnalyzer $pgAnalyzer)
+    {
         $tables = [];
 
         foreach ($pgAnalyzer->getProximityTablesFrom($parentTable) as $tbId => $tble) {
@@ -347,10 +369,11 @@ class SqlGenerator {
      * @param PgAnalyzer $pgAnalyzer
      * @return string
      */
-    public function generateSql(PgAnalyzer $pgAnalyzer) {
+    public function generateSql(PgAnalyzer $pgAnalyzer)
+    {
         $sql = '';
         if (count($this->columns) > 0) {
-            $sql .="SELECT ";
+            $sql .= "SELECT ";
 
             foreach ($this->columns as $col) {
                 $sql .= $col->getTableAlias() . '.' . $col->getName() . ",";
@@ -359,7 +382,7 @@ class SqlGenerator {
         }
 
         if (count($this->tables) > 0) {
-            $sql .=" FROM ";
+            $sql .= " FROM ";
             foreach ($this->tables as $table) {
                 $joins = '';
 
@@ -385,7 +408,7 @@ class SqlGenerator {
         }
 
         if (count($this->groupBy) > 0) {
-            $sql .=" GROUP BY ";
+            $sql .= " GROUP BY ";
             foreach ($this->groupBy as $col) {
                 $sql .= $col . ",";
             }
@@ -393,7 +416,7 @@ class SqlGenerator {
         }
 
         if (count($this->orderBy) > 0) {
-            $sql .=" ORDER BY ";
+            $sql .= " ORDER BY ";
             foreach ($this->orderBy as $col) {
                 $sql .= $col . ",";
             }
@@ -402,13 +425,15 @@ class SqlGenerator {
         return $sql;
     }
 
-    public function __set($name, $value) {
+    public function __set($name, $value)
+    {
         if (!isset($this->$name) || !empty($this->$value)) {
             $this->$name = $value;
         }
     }
 
-    public function __get($name) {
+    public function __get($name)
+    {
         if (isset($this->$name)) {
             return $this->$name;
         } else {
@@ -416,11 +441,17 @@ class SqlGenerator {
         }
     }
 
-    public function __call($method, $arguments) {
+    public function __call($method, $arguments)
+    {
         /**
-         * To fill the collections. Method as to be like add<Pg element>. Exemple addTable(Table $table) will do $this->tables[$table->getOid()] = $table
+         * To fill the collections.
+         * Method as to be like add<Pg element>.
+         * Example addTable(Table $table) will do $this->tables[$table->getOid()] = $table
          */
-        if (preg_match('#^add([[:alnum:]]{1,})$#', $method, $matches) && is_array($arguments) && count($arguments) == 1 && is_array($arguments[0])) {
+        if (preg_match('#^add([[:alnum:]]{1,})$#', $method, $matches)
+            && is_array($arguments)
+            && count($arguments) == 1
+            && is_array($arguments[0])) {
             $element = $matches[1];
             $attribut = strtolower($element) . 's';
 
@@ -429,7 +460,8 @@ class SqlGenerator {
                 $tableau = &$this->$attribut;
                 $tableau[] = $arguments[0];
             }
-        } elseif (preg_match('#^getA(Table|Join|Column|GroupBy|OrderBy)$#', $method, $matches) && count($arguments) == 1) {
+        } elseif (preg_match('#^getA(Table|Join|Column|GroupBy|OrderBy)$#', $method, $matches)
+            && count($arguments) == 1) {
             $element = $matches[1];
             $attribut = strtolower($element) . 's';
             $tableau = &$this->$attribut;

@@ -94,7 +94,13 @@ class PgMassRetriever
         $sql = "SELECT n.nspname AS name,
                 pg_catalog.pg_get_userbyid(n.nspowner) AS owner
               FROM pg_catalog.pg_namespace n
-              WHERE n.nspname !~ '^pg_' AND n.nspname <> 'information_schema'
+              WHERE n.nspname !~ '^pg_'
+                AND n.nspname <> 'pg_catalog'
+                AND n.nspname <> 'information_schema'
+                AND n.nspname !~ '^pg_toast'
+                AND n.nspname !~ '^pg_temp'
+                AND n.nspname <> 'londiste'
+                AND n.nspname <> 'pgq'
               ORDER BY 1";
         $rsm = new ResultSetMapping();
         $rsm->addScalarResult('name', 'name');
@@ -116,6 +122,25 @@ class PgMassRetriever
         }
 
         return $schemas;
+    }
+
+    public function getSearchPath()
+    {
+        $sql = "SHOW search_path";
+        $rsm = new ResultSetMapping();
+        $rsm->addScalarResult('search_path', 'search_path');
+        $stmt = $this->em->createNativeQuery($sql, $rsm);
+        $stmt->useResultCache(true, PgRetriever::CACHE_LIFETIME);
+        $row = $stmt->getOneOrNullResult(AbstractQuery::HYDRATE_ARRAY);
+
+        $searchPath = [];
+
+        if($row){
+            $searchPath = explode(', ', $row['search_path']);
+        }else{
+            $this->logger->addWarning('No search path found!');
+        }
+        return $searchPath;
     }
 
     /**
@@ -149,8 +174,11 @@ class PgMassRetriever
                    LEFT JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
               WHERE c.relkind IN ('r','v','S','f','')
                     AND n.nspname <> 'pg_catalog'
-                    AND n.nspname <> 'information_schema'
-                    AND n.nspname !~ '^pg_toast'
+                   AND n.nspname <> 'information_schema'
+                   AND n.nspname !~ '^pg_toast'
+                   AND n.nspname !~ '^pg_temp'
+                   AND n.nspname <> 'londiste'
+                   AND n.nspname <> 'pgq'
                     --AND pg_catalog.pg_table_is_visible(c.oid)
                     " . (($schema != '') ? " AND n.nspname = '" . pg_escape_string($schema) . "'" : '') . "
               ORDER BY 1,3,2";
@@ -209,7 +237,8 @@ class PgMassRetriever
                      FROM pg_catalog.pg_attrdef d
                      WHERE d.adrelid = a.attrelid AND d.adnum = a.attnum AND a.atthasdef) as default,
                     (not a.attnotnull)::text as nullable,
-                    a.attnum as position,
+                    a.attnum as real_position,
+                    ROW_NUMBER() OVER(PARTITION BY a.attrelid  ORDER BY a.attnum) as position,
                     (SELECT c.collname FROM pg_catalog.pg_collation c, pg_catalog.pg_type t
                      WHERE c.oid = a.attcollation AND t.oid = a.atttypid AND a.attcollation <> t.typcollation) AS attcollation
                   FROM pg_catalog.pg_attribute a
@@ -218,15 +247,18 @@ class PgMassRetriever
                   WHERE a.attnum > 0 AND NOT a.attisdropped
                     AND c.relkind = 'r'
                     AND n.nspname <> 'pg_catalog'
-                    AND n.nspname <> 'information_schema'
-                    AND n.nspname !~ '^pg_toast'
+                   AND n.nspname <> 'information_schema'
+                   AND n.nspname !~ '^pg_toast'
+                   AND n.nspname !~ '^pg_temp'
+                   AND n.nspname <> 'londiste'
+                   AND n.nspname <> 'pgq'
                     --AND pg_catalog.pg_table_is_visible(c.oid)
                   ORDER BY n.nspname, a.attrelid, a.attnum
                         ";
         $rsm = new ResultSetMapping();
         $rsm->addScalarResult('schema', 'schema');
         $rsm->addScalarResult('table', 'table');
-        $rsm->addScalarResult('table_name', 'table_name');
+        $rsm->addScalarResult('table_name', 'tableName');
         $rsm->addScalarResult('oid', 'oid');
         $rsm->addScalarResult('name', 'name');
         $rsm->addScalarResult('type', 'type');
@@ -234,6 +266,7 @@ class PgMassRetriever
         $rsm->addScalarResult('nullable', 'nullable');
         $rsm->addScalarResult('position', 'position');
         $rsm->addScalarResult('attcollation', 'attcollation');
+        $rsm->addScalarResult('real_position', 'realPosition');
 
         $stmt = $this->em->createNativeQuery($sql, $rsm);
         $stmt->useResultCache(true, PgRetriever::CACHE_LIFETIME);
@@ -364,7 +397,13 @@ class PgMassRetriever
             FROM inh
                    INNER JOIN pg_catalog.pg_class c ON (inh.inhrelid = c.oid)
                    INNER JOIN pg_catalog.pg_namespace n ON (c.relnamespace = n.oid)
-                   INNER JOIN pg_catalog.pg_class c2 ON (inh.inhparent = c2.oid)";
+                   INNER JOIN pg_catalog.pg_class c2 ON (inh.inhparent = c2.oid)
+           WHERE n.nspname <> 'pg_catalog'
+               AND n.nspname <> 'information_schema'
+               AND n.nspname !~ '^pg_toast'
+               AND n.nspname !~ '^pg_temp'
+               AND n.nspname <> 'londiste'
+               AND n.nspname <> 'pgq'";
         $rsm = new ResultSetMapping();
         $rsm->addScalarResult('oid', 'oid');
         $rsm->addScalarResult('name', 'name');
@@ -381,12 +420,16 @@ class PgMassRetriever
             foreach ($row as $key => $value) {
                 $child->__set($key, $value);
             }
-
-            if($this->index_type == PgRetriever::INDEX_TYPE_OID){
-                $schemas[$row['schema']]->addTableParentTable($row['oid'], $child);
-            }elseif($this->index_type == PgRetriever::INDEX_TYPE_NAME){
-                $schemas[$row['schema']]->addTableParentTable($row['table_name'], $child);
+            try{
+                if($this->index_type == PgRetriever::INDEX_TYPE_OID){
+                    $schemas[$row['schema']]->addTableParentTable($row['oid'], $child);
+                }elseif($this->index_type == PgRetriever::INDEX_TYPE_NAME){
+                    $schemas[$row['schema']]->addTableParentTable($row['table_name'], $child);
+                }
+            }catch(\Exception $e){
+                $this->logger->addAlert($e->getMessage().' '.json_encode($row), $e->getTrace());
             }
+
             unset($child);
         }
         unset($stmt);
@@ -410,8 +453,11 @@ class PgMassRetriever
                   INNER JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
                 WHERE c2.relkind = 'r'
                     AND n.nspname <> 'pg_catalog'
-                    AND n.nspname <> 'information_schema'
-                    AND n.nspname !~ '^pg_toast'
+                   AND n.nspname <> 'information_schema'
+                   AND n.nspname !~ '^pg_toast'
+                   AND n.nspname !~ '^pg_temp'
+                   AND n.nspname <> 'londiste'
+                   AND n.nspname <> 'pgq'
                     --AND pg_catalog.pg_table_is_visible(c2.oid)
                 ORDER BY c.oid::pg_catalog.regclass::pg_catalog.text";
         $rsm = new ResultSetMapping();
@@ -460,8 +506,11 @@ class PgMassRetriever
                           INNER JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
                         WHERE  c.relkind = 'r'
                             AND n.nspname <> 'pg_catalog'
-                            AND n.nspname <> 'information_schema'
-                            AND n.nspname !~ '^pg_toast'
+                           AND n.nspname <> 'information_schema'
+                           AND n.nspname !~ '^pg_toast'
+                           AND n.nspname !~ '^pg_temp'
+                           AND n.nspname <> 'londiste'
+                           AND n.nspname <> 'pgq'
                             --AND pg_catalog.pg_table_is_visible(c.oid)
                         ORDER BY 1";
         $rsm = new ResultSetMapping();
@@ -517,8 +566,11 @@ class PgMassRetriever
                         WHERE NOT t.tgisinternal
                             AND c.relkind = 'r'
                             AND n.nspname <> 'pg_catalog'
-                            AND n.nspname <> 'information_schema'
-                            AND n.nspname !~ '^pg_toast'
+                           AND n.nspname <> 'information_schema'
+                           AND n.nspname !~ '^pg_toast'
+                           AND n.nspname !~ '^pg_temp'
+                           AND n.nspname <> 'londiste'
+                           AND n.nspname <> 'pgq'
                             --AND pg_catalog.pg_table_is_visible(c.oid)
                         ORDER BY 1";
         $rsm = new ResultSetMapping();
@@ -568,8 +620,11 @@ class PgMassRetriever
                 WHERE r.contype = 'f'
                     AND c.relkind = 'r'
                     AND n.nspname <> 'pg_catalog'
-                    AND n.nspname <> 'information_schema'
-                    AND n.nspname !~ '^pg_toast'
+                   AND n.nspname <> 'information_schema'
+                   AND n.nspname !~ '^pg_toast'
+                   AND n.nspname !~ '^pg_temp'
+                   AND n.nspname <> 'londiste'
+                   AND n.nspname <> 'pgq'
                     --AND pg_catalog.pg_table_is_visible(c.oid)
                 ORDER BY 1";
         $rsm = new ResultSetMapping();
@@ -614,8 +669,11 @@ class PgMassRetriever
                             LEFT JOIN pg_catalog.pg_constraint con ON (conrelid = i.indrelid AND conindid = i.indexrelid AND contype IN ('p','u','x'))
                     WHERE c.relkind = 'r'
                         AND n.nspname <> 'pg_catalog'
-                        AND n.nspname <> 'information_schema'
-                        AND n.nspname !~ '^pg_toast'
+                   AND n.nspname <> 'information_schema'
+                   AND n.nspname !~ '^pg_toast'
+                   AND n.nspname !~ '^pg_temp'
+                   AND n.nspname <> 'londiste'
+                   AND n.nspname <> 'pgq'
                         --AND pg_catalog.pg_table_is_visible(c.oid)
                     ORDER BY i.indisprimary DESC,
                         i.indisunique DESC,

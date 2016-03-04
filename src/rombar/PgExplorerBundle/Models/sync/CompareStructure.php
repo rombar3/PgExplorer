@@ -13,6 +13,7 @@ use Doctrine\Bundle\DoctrineBundle\Registry;
 use Monolog\Logger;
 use rombar\PgExplorerBundle\Exceptions\StructureException;
 use rombar\PgExplorerBundle\Models\PgMassRetriever;
+use rombar\PgExplorerBundle\Models\Utils;
 use Symfony\Component\HttpFoundation\Session\Session;
 use rombar\PgExplorerBundle\Models\PgAnalyzer;
 use rombar\PgExplorerBundle\Models\PgRetriever;
@@ -84,9 +85,9 @@ class CompareStructure {
         }else{
             $this->fromAnalyzer->initSchemas();
             $this->fromAnalyzer->initSchemasElements();
-            $this->fromAnalyzer->initAllTableInfo();
+            $this->fromAnalyzer->initCompareTableInfo();
 
-            $this->session->set(SyncHandler::SESSION_FROM_KEY, $this->fromAnalyzer->getSchemas());
+            //$this->session->set(SyncHandler::SESSION_FROM_KEY, $this->fromAnalyzer->getSchemas());
         }
 
         if($this->session->has(SyncHandler::SESSION_TO_KEY)){
@@ -95,10 +96,10 @@ class CompareStructure {
         }else{
             $this->toAnalyzer->initSchemas();
             $this->toAnalyzer->initSchemasElements();
-            $this->toAnalyzer->initAllTableInfo();
+            $this->toAnalyzer->initCompareTableInfo();
             $this->toAnalyzer->initTables();
 
-            $this->session->set(SyncHandler::SESSION_TO_KEY, $this->toAnalyzer->getSchemas());
+            //$this->session->set(SyncHandler::SESSION_TO_KEY, $this->toAnalyzer->getSchemas());
         }
 
     }
@@ -113,7 +114,12 @@ class CompareStructure {
         foreach($this->fromAnalyzer->getSchemaNames() as $name){
             $this->nbItemsTested++;
             if(!$this->toAnalyzer->hasSchema($name)){
-                throw new StructureException('Schema '.$name.' is missing.');
+                if($this->fromAnalyzer->nbTablesInSchema($name)){
+                    throw new StructureException('Schema '.$name.' is missing.');
+                }else{
+                    $this->logger->addWarning('Schema '.$name.' has no tables!');
+                }
+
             }
         }
 
@@ -160,19 +166,38 @@ class CompareStructure {
             throw new \Exception('A table has no columns!');
         }
 
-        foreach($fromCols as $fromName => $fromCol){
+        $ignoredMethods = ['getTable', 'getRealPosition', 'getOid'];
 
-            $toCol = $toCols[$fromName];
-            if(empty($toCol)){
-                throw new StructureException('Targeted database has a missing column '.$fromCol->getName().' in table '.$fromCol->getSchema().PgAnalyzer::DB_SEPARATOR.$fromCol->getTable());
-            }
+        list($namesFrom, $namesTo) = $this->compareColumnsNames($fromCols, $toCols);
+
+        foreach($namesFrom as $fromKey => $fromColName){
+            $fromCol = $fromCols[$fromKey];
+            $toCol = $toCols[array_search($fromColName, $namesTo)];
+
             foreach($columnClass->getMethods(\ReflectionMethod::IS_PUBLIC) as $method){
 
-                if(preg_match('#^get#', $method->name) && $method->name != 'getTable'){
+                if(preg_match('#^get#', $method->name) && !in_array($method->name, $ignoredMethods)){
                     $getter = $method->name;
 
                     if($fromCol->$getter() != $toCol->$getter()){
-                        $this->logger->addWarning($getter.' : ' .$fromCol->$getter().' vs '.$toCol->$getter());
+                        //Special hook for nextval.
+                        // With certain search path, the schema can be omitted wich make a false positive.
+                        if($getter == 'getDefault' && preg_match('/^nextval/', $fromCol->$getter())){
+                            $diff = str_replace('.', '', Utils::stringDiff($fromCol->$getter(), $toCol->$getter()));
+                            $this->logger->addDebug('diff search_path : '.$diff);
+
+                            if(in_array($diff, $this->toAnalyzer->getSearchPath())
+                                    || in_array($diff, $this->fromAnalyzer->getSearchPath())
+                            ){
+                                $this->logger->addWarning('Bypass by search_path test for '.$getter.' : ' .$fromCol->$getter().' vs '.$toCol->$getter());
+                                continue;
+                            }
+
+                        }
+
+                        $this->logger->addWarning('Column '.$fromColName.'->'.$getter.'() : ' .$fromCol->$getter().' vs '.$toCol->$getter());
+                        var_dump($fromCol);
+                        var_dump($toCol);
                         throw new StructureException('Targeted database has a different column '.$fromCol->getName().
                             ' in table '.$fromCol->getSchema().
                             PgAnalyzer::DB_SEPARATOR.$this->fromAnalyzer->getTable(
@@ -184,6 +209,29 @@ class CompareStructure {
                 }
             }
         }
+    }
+
+    /**
+     * @param array $fromCols
+     * @param array $toCols
+     * @return array
+     * @throws StructureException
+     */
+    private function compareColumnsNames($fromCols, $toCols)
+    {
+        $namesTo = [];
+        foreach($toCols as $key => $col){
+            $namesTo[$key] = $col->getName();
+        }
+
+        $namesFrom = [];
+        foreach($fromCols as $key => $col){
+            $namesFrom[$key] = $col->getName();
+            if(!in_array($col->getName(), $namesTo)){
+                throw new StructureException('Targeted database has a missing column '.$col->getName().' in table '.$col->getSchema().PgAnalyzer::DB_SEPARATOR.$col->getTable());
+            }
+        }
+        return [$namesFrom, $namesTo];
     }
 
     /**
