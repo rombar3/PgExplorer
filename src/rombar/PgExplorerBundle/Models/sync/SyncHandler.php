@@ -6,6 +6,7 @@ use Doctrine\Bundle\DoctrineBundle\Registry;
 use Monolog\Logger;
 use rombar\PgExplorerBundle\Exceptions\StructureException;
 use rombar\PgExplorerBundle\Exceptions\SyncException;
+use rombar\PgExplorerBundle\Models\PgMassRetriever;
 use Symfony\Bundle\FrameworkBundle\Routing\Router;
 use Symfony\Component\Form\Form;
 use Symfony\Component\Form\FormFactory;
@@ -60,6 +61,11 @@ class SyncHandler {
      */
     private $pgSynchronizer;
 
+    /**
+     * @var array
+     */
+    private $schemas;
+
     public function __construct(Session $session,
                                 Registry $doctrine,
                                 FormFactory $formFactory,
@@ -107,6 +113,22 @@ class SyncHandler {
         $this->parameters->setTestSchema(true);
         $this->parameters->setInsertData(false);
         $this->parameters->setSyncChild(false);
+    }
+
+    private function getSchemaList()
+    {
+        if(count($this->schemas) == 0){
+            $pgMassRetriever = new PgMassRetriever($this->doctrine, $this->logger);
+            $this->schemas = $pgMassRetriever->getSchemas();
+        }
+
+        $schemaList = ['all' => 'All'];
+
+        foreach($this->schemas as $name => $schema){
+            $schemaList[$name] = $name;
+        }
+
+        return $schemaList;
     }
 
     private function getManagerList()
@@ -167,7 +189,7 @@ class SyncHandler {
                 'read_only' => $readOnly
             ])
             ->add('schemas', 'choice', [
-                'choices' => ['all' => 'all', 'public' => 'public'],
+                'choices' => $this->getSchemaList() ,
                 'multiple' => true,
                 'required' => false,
                 'read_only' => $readOnly
@@ -179,6 +201,13 @@ class SyncHandler {
                 'read_only' => $readOnly
             ])
             ->add('save', 'submit')
+            ->add('cancel', 'button', ['attr' =>
+                [
+                    'id' => 'cancelButton',
+                    'class' => 'btn-primary',
+                    'onclick' => "location.assign(Routing.generate('sync'));"
+                ]
+            ])
             ->getForm();
 
 

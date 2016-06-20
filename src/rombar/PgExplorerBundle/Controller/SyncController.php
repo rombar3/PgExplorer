@@ -22,7 +22,7 @@ class SyncController extends Controller
 
     /**
      * @return array
-     * @Route("/", name="sync")
+     * @Route("/", name="sync", options={"expose"=true})
      * @Template()
      *
      */
